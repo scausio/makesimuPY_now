@@ -1,0 +1,39 @@
+$ WAVEWATCH III shell input file
+$ ------------------------------
+   F F     Water levels
+   F F     Currents
+   T F     Winds
+   F       Ice concentrations
+   F       Assimilation data : Mean parameters
+   F       Assimilation data : 1-D spectra
+   F       Assimilation data : 2-D spectra
+$
+ START_CHUNK
+ END_CHUNK
+$
+   1
+$
+   START_CHUNK 3600 END_CHUNK
+$
+N
+ {{outputs_w}}
+$
+$
+   19680606 000000      0  19680608 000000
+   19680606 000000      0  19680608 000000
+   START_CHUNK  {{runtime}}  END_CHUNK
+   19680606 000000      0  19680608 000000
+   19680606 000000      0  19680608 000000
+$ Type 7 : Coupling
+  START_CHUNK {{coupling_freq}} END_CHUNK
+  N
+$
+$   - Sent fields by ww3:
+$       - Ocean model : OCDN T0M1 OCHA OHS DIR BHD TWO UBR FOC TAW TUS USS LM DRY
+  {{hydro_fields}}
+$
+$   - Received fields by ww3:
+$  SSH CUR
+  {{wave_fields}}
+$
+'STP'

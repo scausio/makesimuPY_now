@@ -1,0 +1,218 @@
+#!/bin/bash
+#BSUB -q {{paral_queue}}
+#BSUB -R "span[ptile=36]"
+#BSUB -n {{oasiscores}}
+#BSUB -n {{experiment_name}}
+#BSUB -P 0512
+#BSUB  -M 86G
+#BSUB -R "rusage[mem=86G]"
+#export I_MPI_PLATFORM="skx"
+#export I_MPI_EXTRA_FILE_SYSTEM=1
+#export I_MPI_HYDRA_BOOTSTRAP="lsf"
+#export I_MPI_HYDRA_BRANCH_COUNT=$(( $( echo "${LSB_MCPU_HOSTS}" | wc -w ) / 2 ))
+#export I_MPI_HYDRA_COLLECTIVE_LAUNCH=1
+
+export MPIRUN="mpirun -n $OCEANCORES"
+export LD_LIBRARY_PATH=${XIOS}/lib:${LD_LIBRARY_PATH}
+XIOS_SERVER_PATHNAME="${XIOS}/bin/xios_server.exe"
+
+OCEANCORES="{{oceancores}}"
+WW3CORES="{{wavecores}}"
+XIOS_NUMPROCS=0
+
+# Script for launching NEMO simulation for BS-PHY model developments
+# P. Oddo for Med-PHY (2015)
+# revisions by S. Ciliberti (2018)
+
+#- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+# print echo of commands before and after shell interpretation
+#- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
+nameExp="{{experiment_name}}"
+basepath="{{base}}"
+#- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+#- Launching run repository
+#- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+R_EXPER="${basepath}/${nameExp}/tmp"
+mkdir -p $R_EXPER
+#- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+R_EXEDIR="{{reference_experiment}}"
+
+#- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+#- output files storing 
+#- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
+R_SORTIE_OCE="${basepath}/${nameExp}/output_ocean"
+R_SORTIE_WAV="${basepath}/${nameExp}/output_wave"
+R_RST_WAV="${basepath}/${nameExp}/restart_wave"
+mkdir -p $R_SORTIE_OCE
+mkdir -p $R_SORTIE_WAV
+mkdir -p $R_RST_WAV
+
+#- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+#- execution repository
+#- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
+R_TMP="${basepath}/${nameExp}/model"
+#- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
+#- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+[ -d ${R_TMP} ] || mkdir ${R_TMP}
+cd ${R_TMP}
+
+##rm *nc
+
+#- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
+#--  get the executable
+#- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
+
+#cp ${R_EXEDIR}/nemo nemo
+#chmod 777 nemo
+
+#- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
+#- Namelist for the configuration 
+#- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
+
+cp ${R_EXPER}/WHATLIST namelist_cfg
+cp ${R_EXEDIR}/namelist_ref namelist_ref
+cp ${R_EXEDIR}/iodef.xml iodef.xml
+cp ${R_EXEDIR}/field_def_nemo-oce.xml field_def_nemo-oce.xml
+cp ${R_EXEDIR}/file_def_nemo-oce.xml file_def_nemo-oce.xml
+cp ${R_EXEDIR}/domain_def_nemo.xml domain_def_nemo.xml
+cp ${R_EXEDIR}/layout.dat layout.dat
+#cp ${R_EXEDIR}/output.namelist.dyn output.namelist.dyn
+cp ${R_EXEDIR}/context_nemo.xml context_nemo.xml
+cp ${R_EXEDIR}/grid_def_nemo.xml grid_def_nemo.xml
+cp ${R_EXEDIR}/axis_def_nemo.xml axis_def_nemo.xml
+
+
+# WW3
+cp ${R_EXPER}/WHATSHEL ww3_shel.inp
+cp ${R_EXPER}/WHATOUNP ww3_ounf.inp
+
+# OASIS
+cp ${R_EXPER}/namcouple namcouple
+
+#- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
+# Link static files
+#- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
+
+ln -fs "{{mod_def}}"  ./mod_def.ww3
+ln -fs "{{atm_forcings_w}}" ./wind.ww3
+ln -fs "{{grids}}" ./grids.nc
+ln -fs "{{masks}}" ./masks.nc
+ln -fs "{{r_nemo}}" ./r_nemo.nc
+ln -fs "{{r_ww3}}" ./r_ww3.nc
+ln -f "{{rmp_nemo}}" ./rmp_nemt_to_ww3t_DISTWGT_8.nc
+ln -f "{{rmp_ww3}}" ./rmp_ww3t_to_nemt_DISTWGT_8.nc
+ln -s ${R_EXEDIR}/coordinates.bdy.nc .
+ln -s ${R_EXEDIR}/opa.xx .
+ln -s ${R_EXEDIR}/section_ijglobal.diadct .
+#- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
+#---------------------------------------------------
+# Link executables
+ln -fs ${R_EXEDIR}/nemo nemo
+ln -fs "{{ww3_exe}}"/ww3_shel wwatch
+ln -fs "{{ww3_exe}}"/ww3_ounf .
+# -------------------------------------------------
+# Link domain configuration file
+#- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+ln -fs "{{domain}}"  domain_cfg.nc
+#- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
+# Link init
+#- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
+
+ln -fs "{{initSal}}" init_sal.nc
+ln -fs "{{initTemp}}" init_temp.nc
+#- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+# Link viscosity and diffusivity
+#- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+ln -fs "{{viscosity}}" eddy_viscosity_2D.nc
+ln -fs "{{diffusivity}}" eddy_diffusivity_2D.nc
+
+#- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
+touch ${basepath}/${nameExp}/model/jobNumber_FIRSTTIMESTEP
+#- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+# link restart files (ocean and lateral open boundary)
+#- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
+for aa in {0..TCPUM1};
+do
+cpuname=`printf "%0*d\n" 4 $aa`
+##INCASENOTFIRST ln -fs ${R_SORTIE_OCE}/restart_LASTTIMESTEP_$cpuname.nc restart_$cpuname.nc
+#INCASENOTFIRST ln -fs ${R_SORTIE_OCE}/EXPERIMENT_STEPM1_restart_$cpuname.nc restart_$cpuname.nc
+done
+#INCASENOTFIRST ln -fs ${R_SORTIE_OCE}/restart.obc.STEPM1.output restart.obc
+
+#- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+# run !
+#mpiexec.hydra ./nemo ||exit 1
+
+time mpirun -n $OCEANCORES ./nemo : -n $WW3CORES ./wwatch || exit 1
+
+#- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+# WW3 output bin 2 netcdf
+./ww3_ounf
+
+#- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
+# Create r_ww3.nc
+mv r_ww3.nc $R_RST_WAV/r_ww3.nc_FIRSTTIMESTEP
+#ncks -O -F -d time,24 -v hs,t0m1,bhd,uuss,vuss,utus,vtus,foc,C ww3.WW3_LASTFILE.nc r_ww3.nc
+mv ww3.WW3_LASTFILE.nc r_ww3.nc
+ncrename -v hs,WW3__OHS r_ww3.nc
+ncrename -v t0m1,WW3_T0M1 r_ww3.nc
+ncrename -v uuss,WW3_USSX r_ww3.nc
+ncrename -v vuss,WW3_USSY r_ww3.nc
+ncrename -v utus,WW3_TUSX r_ww3.nc
+ncrename -v vtus,WW3_TUSY r_ww3.nc
+ncrename -v bhd,WW3__BHD r_ww3.nc
+ncrename -v foc,WW3__FOC r_ww3.nc
+ncrename -v C01,WW3_OCDN r_ww3.nc
+# ncwa -O -a time r_ww3.nc r_ww3.nc
+
+#- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
+#- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+#- to copy on a storage machine
+#- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
+[ -d ${R_SORTIE_OCE} ] || mkdir -p ${R_SORTIE_OCE}
+
+#- Save restart file
+
+for aa in {0..TCPUM1};  
+do
+cpuname=`printf "%0*d\n" 4 $aa`
+#mv *_restart_$cpuname.nc ${R_SORTIE_OCE}/restart_LASTTIMESTEP_$cpuname.nc
+mv EXPERIMENT_*_restart_$cpuname.nc ${R_SORTIE_OCE}/EXPERIMENT_LASTTIMESTEP_restart_$cpuname.nc
+done
+
+#- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+#- Save ocean output files
+#- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+mv ocean.output ${R_SORTIE_OCE}/ocean_FIRSTTIMESTEP.output
+mv timing.output ${R_SORTIE_OCE}/timing_FIRSTTIMESTEP.output
+mv *_grid_*.nc ${R_SORTIE_OCE}/.
+
+mv ww3.*.nc ${R_SORTIE_WAV}
+mv ww3_shel.inp ${R_SORTIE_WAV}/ww3_shel_FIRSTTIMESTEP.inp
+mv ww3_ounf.inp ${R_SORTIE_WAV}/ww3_ounf_FIRSTTIMESTEP.inp
+mv out_grd.ww3 ${R_SORTIE_WAV}/out_grd_FIRSTTIMESTEP.ww3
+mv log.ww3 ${R_SORTIE_WAV}/log_FIRSTTIMESTEP.ww3
+cp restart001.ww3 ${R_RST_WAV}/restart_FIRSTTIMESTEP.ww3
+mv restart001.ww3 restart.ww3
+#- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+#- Save ftrace file
+#- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+#[ -f ftrace.out* ] && $DPUT ftrace.out* ${R_SORTIE_OCE}/.
+ 
+#- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+#- Submit next Job
+#- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
+cd $R_EXPER
+bsub < Job_rebuilt_FIRSTTIMESTEP
+##wait

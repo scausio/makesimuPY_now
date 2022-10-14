@@ -1,0 +1,28 @@
+#!/bin/bash
+#BSUB -q {{serial_queue}}
+##BSUB -n 1
+#BSUB -o RB_bs4.%J.out
+#BSUB -e RB_bs4.%J.err
+#BSUB -J RB_bs4
+#BSUB -P 0512
+
+
+# Script for managing the output of NEMO model run. It is automatically launched by Job_EXP
+# P. Oddo for Med-PHY (2015)
+# S. Ciliberti (2018)
+
+nameExp="{{experiment_name}}"
+basepath="{{base}}"
+R_EXPER="${basepath}/${nameExp}/tmp"
+
+R_SORTIE_OCE="${basepath}/${nameExp}/output_ocean"
+R_SORTIE_WAV="${basepath}/${nameExp}/output_wave"
+
+R_SORTIE_OCE_rb="${basepath}/${nameExp}/rebuilt"
+
+mkdir -p $R_SORTIE_OCE_rb
+mv ${R_SORTIE_OCE}/*grid_* ${R_SORTIE_OCE_rb}
+
+sleep 10
+cd $R_EXPER
+bsub < Job_EXP_NEWSTEP

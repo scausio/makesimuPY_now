@@ -1,0 +1,64 @@
+conf:
+  start_date: 20140101
+  end_date: 20140201
+  serial_queue: s_short
+  paral_queue: p_short
+  models:
+    x_size: 591
+    y_size: 261
+    simu_lenght: 3
+    coupling_frequency: 3600
+    nemo:
+      reference_experiment: /work/opa/now_rsc/nemo/ref_exps/base4.2
+      cores: 144
+      timestep: 200
+    ww3:
+      cores: 144
+      timestep: 300
+      exe: /users_home/opa/now_rsc/ww3_cd/model/exe
+      outputs: 'DPT WND HS T0M1 LM DIR USS TUS BHD FOC TWO U1 U2'
+  coupling_fields:
+    hydro:  [TUS, USS] #OCDN T0M1 OCHA OHS DIR BHD TWO UBR FOC TAW TUS USS LM DRY
+    wave: [SSH] # SSH CUR
+  coupling_physics:
+    stokes_drift: T
+    stokes_coriolis: F
+    stokes_transport: T
+    vortex_force: F
+    charnok: F
+    drag_coeff: F
+    bernoulli_hd: F
+    stokes_shear: F
+    foc: F
+    tauoc: F
+    taw: F
+    ssh: F
+    cur: F
+
+  paths:
+    jday: /work/opa/now_rsc/nemo/tools/my_jday.exe
+    base: /work/opa/now_rsc/now/
+  files:
+    nemo:
+      domain: /data/opa/bs-mod/upstream_bs-nrt/baseline/geodta/domain_cfg-bathy_bs-nrt_fullBox.nc
+      initTemp: /data/opa/bs-mod/upstream_bs-nrt/baseline/inicon/T_utss_fullBox-sdn2015m01.nc
+      initSal: /data/opa/bs-mod/upstream_bs-nrt/baseline/inicon/S_utss_fullBox-sdn2015m01.nc
+      viscosity: /data/opa/bs-mod/upstream_bs-nrt/baseline/phydta/eddy_viscosity_121_mis2.nc
+      diffusivity: /data/opa/bs-mod/upstream_bs-nrt/baseline/phydta/eddy_diffusivity_121_mis2.nc
+      runoff: /data/opa/bs-mod/upstream_bs-nrt/baseline/sbcrnf/daily/
+      atm_forcings:
+        path: /data/opa/bs-mod/upstream_bs-nrt/sbcatm/
+        bil_weight: bilin.nc
+        bic_weight: bicub.nc
+    ww3:
+      atm_forcings: /work/opa/now_rsc/now/data/wind_YEAR.ww3
+      mod_def: /work/opa/now_rsc/now/data/mod_def_6.07_cd.ww3
+    oasis:
+      grids: /work/opa/now_rsc/now/data/grids_NRT.nc
+      masks: /work/opa/now_rsc/now/data/masks_NRT.nc
+      rmp_ww3_2_nem: /work/opa/now_rsc/now/data/rmp_ww3t_to_nemt_DISTWGT_8_NRT.nc
+      rmp_nem_2_ww3: /work/opa/now_rsc/now/data/rmp_nemt_to_ww3t_DISTWGT_8_NRT.nc
+      r_ww3: /work/opa/now_rsc/now/data/r_ww3_20140101.nc
+      r_nemo: /work/opa/now_rsc/now/data/r_nemo_20140101.nc
+
+

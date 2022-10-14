@@ -1,0 +1,180 @@
+#!/bin/sh
+
+####################################################################
+## This script performs consecutive simulations
+## 
+##  Paolo Oddo (first version)
+##  Stefania Ciliberti, OPA (stefania.ciliberti@cmcc.it) for BS
+####################################################################
+
+name='{{experiment_name}}'
+
+#- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+# Set number of nodes and cpu per nodes
+#- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+nodes="{{cores_o}}"
+cpn='1'
+tcpun=`expr  $nodes \* $cpn `
+tcpunm1=`expr  $tcpun \- 1 `
+
+#- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+# starting time of the first simulation
+#- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+start_time='{{start_date}}'
+#- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+# starting time of the last simulation
+#- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+endin_time='{{end_date}}'
+
+#- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+# length of each simulation in days
+#- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+simu_length='{{simu_lenght}}'
+
+#- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+# time-step for the physical and wave models
+#- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+time_step_o='{{timestep_o}}'
+time_step_w='{{timestep_w}}'
+
+#- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+# convert to julian
+#- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+start_jul=`{{jday}} $start_time -0`
+endin_jul=`{{jday}} $endin_time -0`
+
+#- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
+n_days=`expr $endin_jul \- $start_jul`
+
+n_time_step=`expr  $n_days \* 86400 `
+
+n_time_step=`expr  $n_time_step \/ $time_step_o `
+
+steps_per_simu=`expr $simu_length \* 86400 `
+
+steps_per_simu=`expr $steps_per_simu \/ $time_step_o `
+
+
+#- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+# start main loop
+#- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
+actual_time_step='1'
+
+while [ $actual_time_step -le $n_time_step ]
+do
+
+first_step=$actual_time_step
+last_step=`expr $actual_time_step \+ $steps_per_simu \- 1`
+first_m1=`expr $first_step \- 1`
+last_p1=`expr $last_step \+ 1`
+start_secs=`expr $first_m1 \* $time_step_o`
+end_secs=`expr $last_step \* $time_step_o`
+
+secs=$(date +%s --date='{{start_date}}')
+start_chunk=$(date '+%Y%m%d %H%M%S' --date="@$((secs + $start_secs))")
+end_chunk=$(date '+%Y%m%d %H%M%S' --date="@$((secs + $end_secs))")
+first_output=$(date '+%Y%m%d %H%M%S' --date="@$((secs + 3600))")
+ww3_lastfile=$(date '+%Y%m%d' --date="@$((secs + $end_secs))")
+end_year=end_chunk=$(date '+%Y' --date="@$((secs + $end_secs))")
+
+   if [  -d tmp/namelist_cfg_$first_step ] ; then
+       rm tmp/namelist_cfg_$first_step
+   fi
+
+   if [  -d tmp/Job_EXP_$first_step ] ; then
+        rm tmp/Job_EXP_$first_step
+   fi
+
+   if [ $actual_time_step -eq 1 ] ; then
+
+   sed -e "s/FIRSTIMESTEP/$first_step/" \
+       -e "s/LASTTIMESTEP/$last_step/" \
+       -e "s/STARTDATE/$start_time/" \
+       -e "s/RST-TRUE-FALSE/false/" \
+       -e "s/RST-NUMBER-0-2/0/" \
+       -e "s/EXPERIMENT/$name/" \
+       -e "s/NTCPUS/$tcpun/" \
+       -e "s/CLIM-INIT/true/" \
+       namelist_cfg_template > tmp/namelist_cfg_$first_step
+
+   sed -e "s/NAME/$first_step/g" \
+       -e "s/WHATLIST/namelist_cfg_$first_step/g" \
+       -e "s/WHATSHEL/ww3_shel_$first_step.inp/g" \
+       -e "s/WHATOUNP/ww3_ounf_$first_step.inp/g" \
+       -e "s/WHATCOU/namcouple_$first_step/g" \
+       -e "s/WW3_LASTFILE/$ww3_lastfile/g" \
+       -e "s/YEAR/$end_year/" \
+       -e "s/#INCASEFIRST/ /g" \
+       -e "s/FIRSTTIMESTEP/$first_step/g" \
+       -e "s/LASTTIMESTEP/$last_step/g" \
+       -e "s/STEPM1/$first_m1/g" \
+       -e "s/NEXTJOB/$last_p1/g" \
+       -e "s/EXPERIMENT/$name/g" \
+       -e "s/NODES/$nodes/g" \
+       -e "s/CPUPN/$cpn/g" \
+       -e "s/TCPUN/$tcpun/g" \
+       -e "s/TCPUM1/$tcpunm1/g" \
+       -e "s/NEWSTEP/$last_p1/g" \
+       Job_EXP_template > tmp/Job_EXP_$first_step
+
+   sed -e "s/NAME/$first_step/g" \
+       -e "s/DATEREF/$start_time/g" \
+       -e "s/NEWSTEP/$last_p1/g" \
+       Job_rebuilt_template > tmp/Job_rebuilt_$first_step
+else
+
+   sed -e "s/FIRSTIMESTEP/$first_step/g" \
+       -e "s/LASTTIMESTEP/$last_step/g" \
+       -e "s/STARTDATE/$start_time/" \
+       -e "s/RST-TRUE-FALSE/true/g" \
+       -e "s/RST-NUMBER-0-2/2/g" \
+       -e "s/EXPERIMENT/$name/" \
+       -e "s/NTCPUS/$tcpun/" \
+       -e "s/CLIM-INIT/false/" \
+       namelist_cfg_template > tmp/namelist_cfg_$first_step
+
+   sed -e "s/NAME/$first_step/g" \
+       -e "s/WHATLIST/namelist_cfg_$first_step/g" \
+       -e "s/WHATSHEL/ww3_shel_$first_step.inp/g" \
+       -e "s/WHATOUNP/ww3_ounf_$first_step.inp/g" \
+       -e "s/WHATCOU/namcouple_$first_step/g" \
+       -e "s/WW3_LASTFILE/$ww3_lastfile/g" \
+       -e "s/YEAR/$end_year/" \
+       -e "s/#INCASENOTFIRST/ /g" \
+       -e "s/FIRSTTIMESTEP/$first_step/g" \
+       -e "s/LASTTIMESTEP/$last_step/g" \
+       -e "s/STEPM1/$first_m1/g" \
+       -e "s/NEXTJOB/$last_p1/g" \
+       -e "s/EXPERIMENT/$name/g" \
+       -e "s/NODES/$nodes/g" \
+       -e "s/CPUPN/$cpn/g" \
+       -e "s/TCPUN/$tcpun/g" \
+       -e "s/TCPUM1/$tcpunm1/g" \
+       -e "s/NEWSTEP/$last_p1/g" \
+       Job_EXP_template > tmp/Job_EXP_$first_step
+
+   sed -e "s/NAME/$first_step/g" \
+       -e "s/DATEREF/$start_time/g" \
+       -e "s/NEWSTEP/$last_p1/g" \
+       Job_rebuilt_template > tmp/Job_rebuilt_$first_step
+   fi
+
+
+
+sed -e "s/START_CHUNK/$start_chunk/" \
+   -e "s/END_CHUNK/$end_chunk/" \
+   ww3_shel.inp > tmp/ww3_shel_$first_step.inp
+
+sed -e "s/FIRST_OUTPUT/$first_output/" \
+   ww3_ounf.inp > tmp/ww3_ounf_$first_step.inp
+
+# HERE CONTINUE POSTPROC
+
+actual_time_step=`expr $actual_time_step \+ $steps_per_simu `
+
+done
+
+cd tmp
+
