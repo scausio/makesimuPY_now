@@ -4,8 +4,9 @@
 #BSUB -n {{oasiscores}}
 #BSUB -n {{experiment_name}}
 #BSUB -P 0512
-#BSUB  -M 86G
-#BSUB -R "rusage[mem=86G]"
+#BSUB -x
+#BSUB -sla SC_bs_dev
+#BSUB -app bs_dev
 #export I_MPI_PLATFORM="skx"
 #export I_MPI_EXTRA_FILE_SYSTEM=1
 #export I_MPI_HYDRA_BOOTSTRAP="lsf"

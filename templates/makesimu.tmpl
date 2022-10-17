@@ -73,11 +73,17 @@ start_secs=`expr $first_m1 \* $time_step_o`
 end_secs=`expr $last_step \* $time_step_o`
 
 secs=$(date +%s --date='{{start_date}}')
-start_chunk=$(date '+%Y%m%d %H%M%S' --date="@$((secs + $start_secs))")
-end_chunk=$(date '+%Y%m%d %H%M%S' --date="@$((secs + $end_secs))")
-first_output=$(date '+%Y%m%d %H%M%S' --date="@$((secs + 3600))")
+
+# fixed 000000 time
+#start_chunk=$(date '+%Y%m%d %H%M%S' --date="@$((secs + $start_secs))")
+#end_chunk=$(date '+%Y%m%d %H%M%S' --date="@$((secs + $end_secs))")
+start_chunk=$(date '+%Y%m%d' --date="@$((secs + $start_secs))")" 000000"
+end_chunk=$(date '+%Y%m%d' --date="@$((secs + $end_secs))")" 000000"
+
+first_output=$(date '+%Y%m%d %H%M%S' --date="@$((secs + $start_secs + 3600))")
 ww3_lastfile=$(date '+%Y%m%d' --date="@$((secs + $end_secs))")
-end_year=end_chunk=$(date '+%Y' --date="@$((secs + $end_secs))")
+end_year=$(date '+%Y' --date="@$((secs + $end_secs))")
+
 
    if [  -d tmp/namelist_cfg_$first_step ] ; then
        rm tmp/namelist_cfg_$first_step
