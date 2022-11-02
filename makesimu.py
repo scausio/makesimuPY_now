@@ -117,8 +117,6 @@ def getConfigurationByID(path):
 
 def main():
     conf = getConfigurationByID(os.getcwd())
-
-
     setEXP(conf)
     submitMakesimu()
     submitEXP()

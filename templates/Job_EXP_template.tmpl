@@ -2,16 +2,20 @@
 #BSUB -q {{paral_queue}}
 #BSUB -R "span[ptile=36]"
 #BSUB -n {{oasiscores}}
-#BSUB -n {{experiment_name}}
+#BSUB -J {{experiment_name}}
+#BSUB -e job_FIRSTTIMESTEP.err
+#BSUB -o job_FIRSTTIMESTEP.out
 #BSUB -P 0512
 #BSUB -x
 #BSUB -sla SC_bs_dev
 #BSUB -app bs_dev
-#export I_MPI_PLATFORM="skx"
-#export I_MPI_EXTRA_FILE_SYSTEM=1
-#export I_MPI_HYDRA_BOOTSTRAP="lsf"
-#export I_MPI_HYDRA_BRANCH_COUNT=$(( $( echo "${LSB_MCPU_HOSTS}" | wc -w ) / 2 ))
-#export I_MPI_HYDRA_COLLECTIVE_LAUNCH=1
+
+# the following line fixes a bug which induce deadlock in coupler
+source $I_MPI_ROOT/intel64/bin/mpivars.sh release_mt
+#
+
+export I_MPI_HYDRA_BRANCH_COUNT=$(( $( echo "${LSB_MCPU_HOSTS}" | wc -w ) / 2 ))
+export I_MPI_HYDRA_COLLECTIVE_LAUNCH=1
 
 export MPIRUN="mpirun -n $OCEANCORES"
 export LD_LIBRARY_PATH=${XIOS}/lib:${LD_LIBRARY_PATH}
@@ -46,6 +50,9 @@ R_EXEDIR="{{reference_experiment}}"
 R_SORTIE_OCE="${basepath}/${nameExp}/output_ocean"
 R_SORTIE_WAV="${basepath}/${nameExp}/output_wave"
 R_RST_WAV="${basepath}/${nameExp}/restart_wave"
+R_SORTIE_OCE_rb="${basepath}/${nameExp}/rebuilt"
+
+mkdir -p $R_SORTIE_OCE_rb
 mkdir -p $R_SORTIE_OCE
 mkdir -p $R_SORTIE_WAV
 mkdir -p $R_RST_WAV
@@ -60,8 +67,6 @@ R_TMP="${basepath}/${nameExp}/model"
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 [ -d ${R_TMP} ] || mkdir ${R_TMP}
 cd ${R_TMP}
-
-##rm *nc
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
 #--  get the executable
@@ -86,7 +91,6 @@ cp ${R_EXEDIR}/context_nemo.xml context_nemo.xml
 cp ${R_EXEDIR}/grid_def_nemo.xml grid_def_nemo.xml
 cp ${R_EXEDIR}/axis_def_nemo.xml axis_def_nemo.xml
 
-
 # WW3
 cp ${R_EXPER}/WHATSHEL ww3_shel.inp
 cp ${R_EXPER}/WHATOUNP ww3_ounf.inp
@@ -98,39 +102,39 @@ cp ${R_EXPER}/namcouple namcouple
 # Link static files
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
 
-ln -fs "{{mod_def}}"  ./mod_def.ww3
-ln -fs "{{atm_forcings_w}}" ./wind.ww3
-ln -fs "{{grids}}" ./grids.nc
-ln -fs "{{masks}}" ./masks.nc
-ln -fs "{{r_nemo}}" ./r_nemo.nc
-ln -fs "{{r_ww3}}" ./r_ww3.nc
-ln -f "{{rmp_nemo}}" ./rmp_nemt_to_ww3t_DISTWGT_8.nc
-ln -f "{{rmp_ww3}}" ./rmp_ww3t_to_nemt_DISTWGT_8.nc
-ln -s ${R_EXEDIR}/coordinates.bdy.nc .
-ln -s ${R_EXEDIR}/opa.xx .
-ln -s ${R_EXEDIR}/section_ijglobal.diadct .
+#INCASEFIRST ln -fs "{{mod_def}}"  ./mod_def.ww3
+#INCASEFIRST ln -fs "{{atm_forcings_w}}" ./wind.ww3
+#INCASEFIRST ln -fs "{{grids}}" ./grids.nc
+#INCASEFIRST ln -fs "{{masks}}" ./masks.nc
+#INCASEFIRST ln -fs "{{r_nemo}}" ./r_nemo.nc
+#INCASEFIRST ln -fs "{{r_ww3}}" ./r_ww3.nc
+#INCASEFIRST ln -f "{{rmp_nemo}}" ./rmp_nemt_to_ww3t_DISTWGT_8.nc
+#INCASEFIRST ln -f "{{rmp_ww3}}" ./rmp_ww3t_to_nemt_DISTWGT_8.nc
+#INCASEFIRST ln -s ${R_EXEDIR}/coordinates.bdy.nc .
+#INCASEFIRST ln -s ${R_EXEDIR}/opa.xx .
+#INCASEFIRST ln -s ${R_EXEDIR}/section_ijglobal.diadct .
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
 #---------------------------------------------------
 # Link executables
-ln -fs ${R_EXEDIR}/nemo nemo
-ln -fs "{{ww3_exe}}"/ww3_shel wwatch
-ln -fs "{{ww3_exe}}"/ww3_ounf .
+#INCASEFIRST ln -fs ${R_EXEDIR}/nemo nemo
+#INCASEFIRST ln -fs "{{ww3_exe}}"/ww3_shel wwatch
+#INCASEFIRST ln -fs "{{ww3_exe}}"/ww3_ounf .
 # -------------------------------------------------
 # Link domain configuration file
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-ln -fs "{{domain}}"  domain_cfg.nc
+#INCASEFIRST ln -fs "{{domain}}"  domain_cfg.nc
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
 # Link init
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
 
-ln -fs "{{initSal}}" init_sal.nc
-ln -fs "{{initTemp}}" init_temp.nc
+#INCASEFIRST ln -fs "{{initSal}}" init_sal.nc
+#INCASEFIRST ln -fs "{{initTemp}}" init_temp.nc
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 # Link viscosity and diffusivity
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-ln -fs "{{viscosity}}" eddy_viscosity_2D.nc
-ln -fs "{{diffusivity}}" eddy_diffusivity_2D.nc
+#INCASEFIRST ln -fs "{{viscosity}}" eddy_viscosity_2D.nc
+#INCASEFIRST ln -fs "{{diffusivity}}" eddy_diffusivity_2D.nc
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
@@ -149,10 +153,11 @@ done
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 # run !
-#mpiexec.hydra ./nemo ||exit 1
+#time mpirun -n $OCEANCORES ./nemo : -n $WW3CORES ./wwatch || exit 1
+mpiexec.hydra -env I_MPI_HYDRA_COLLECTIVE_LAUNCH 1 -env I_MPI_HYDRA_BRANCH_COUNT 4 -n $OCEANCORES ./nemo : -env I_MPI_HYDRA_COLLECTIVE_LAUNCH 1 -env I_MPI_HYDRA_BRANCH_COUNT 4 -n $WW3CORES ./wwatch
 
-time mpirun -n $OCEANCORES ./nemo : -n $WW3CORES ./wwatch || exit 1
-
+res=$?
+if [ ${res} -ne 0 ];then echo "ERROR! Bye Bye!"; exit 1;fi
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 # WW3 output bin 2 netcdf
 ./ww3_ounf
@@ -160,7 +165,7 @@ time mpirun -n $OCEANCORES ./nemo : -n $WW3CORES ./wwatch || exit 1
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
 # Create r_ww3.nc
-mv r_ww3.nc $R_RST_WAV/r_ww3.nc_FIRSTTIMESTEP
+cp r_ww3.nc $R_RST_WAV/r_ww3.nc_FIRSTTIMESTEP
 #ncks -O -F -d time,24 -v hs,t0m1,bhd,uuss,vuss,utus,vtus,foc,C ww3.WW3_LASTFILE.nc r_ww3.nc
 mv ww3.WW3_LASTFILE.nc r_ww3.nc
 ncrename -v hs,WW3__OHS r_ww3.nc
@@ -211,9 +216,14 @@ mv restart001.ww3 restart.ww3
 #[ -f ftrace.out* ] && $DPUT ftrace.out* ${R_SORTIE_OCE}/.
  
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+#- Move output
+#- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
+mv ${R_SORTIE_OCE}/*grid_* ${R_SORTIE_OCE_rb}
+sleep 10
+#- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 #- Submit next Job
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
 cd $R_EXPER
-bsub < Job_rebuilt_FIRSTTIMESTEP
-##wait
+bsub < Job_EXP_NEWSTEP

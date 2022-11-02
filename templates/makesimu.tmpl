@@ -66,6 +66,7 @@ while [ $actual_time_step -le $n_time_step ]
 do
 
 first_step=$actual_time_step
+prev_step=`expr $actual_time_step \- $steps_per_simu`
 last_step=`expr $actual_time_step \+ $steps_per_simu \- 1`
 first_m1=`expr $first_step \- 1`
 last_p1=`expr $last_step \+ 1`
@@ -123,14 +124,10 @@ end_year=$(date '+%Y' --date="@$((secs + $end_secs))")
        -e "s/TCPUN/$tcpun/g" \
        -e "s/TCPUM1/$tcpunm1/g" \
        -e "s/NEWSTEP/$last_p1/g" \
+        -e "s/#INCASEFIRST/ /g" \
+        -e "s/NEWSTEP/$last_p1/g" \
        Job_EXP_template > tmp/Job_EXP_$first_step
-
-   sed -e "s/NAME/$first_step/g" \
-       -e "s/DATEREF/$start_time/g" \
-       -e "s/NEWSTEP/$last_p1/g" \
-       Job_rebuilt_template > tmp/Job_rebuilt_$first_step
 else
-
    sed -e "s/FIRSTIMESTEP/$first_step/g" \
        -e "s/LASTTIMESTEP/$last_step/g" \
        -e "s/STARTDATE/$start_time/" \
@@ -160,11 +157,6 @@ else
        -e "s/TCPUM1/$tcpunm1/g" \
        -e "s/NEWSTEP/$last_p1/g" \
        Job_EXP_template > tmp/Job_EXP_$first_step
-
-   sed -e "s/NAME/$first_step/g" \
-       -e "s/DATEREF/$start_time/g" \
-       -e "s/NEWSTEP/$last_p1/g" \
-       Job_rebuilt_template > tmp/Job_rebuilt_$first_step
    fi
 
 
